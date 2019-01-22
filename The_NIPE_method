@@ -1,0 +1,84 @@
+float freq[29]={5000, 8392, 11784, 15176, 18568, 21960, 25352, 28744, 32136, 35528, 38920, 42312, 45704, 49096, 52488, 55880, 59272, 62664, 66056, 69448, 72840, 76232, 79624, 83016, 86408, 89800, 93192, 96584, 99976};
+float real[29]={953.83, 913.05, 856.03, 797.76, 739.06, 685.83, 638.43, 597.17, 563.11, 532.74, 508.71, 485.33, 466.04, 450.31, 436.57, 424.68, 414.17, 405.25, 397.23, 390.55, 384.4, 378.86, 373.73, 369.97, 365.97, 362.66, 358.95, 356.06, 353.64};
+float imag[29]={-127.03, -200.81, -257.01, -293.67, -315.51, -326.35, -327.49, -323.5, -315.68, -306.52, -294.35, -284.0, -273.58, -262.24, -250.99, -240.52, -230.58, -221.0, -212.51, -204.05, -196.0, -188.53, -180.81, -174.94, -168.7, -163.73, -156.88, -151.2, -146.11};
+float w[29];
+char i = 0;
+float maxImag = 0.0;
+char index = 0;
+float z_pom_1[29], K[29], Re_est[29], Ri_est[29], Cm_est[29];
+float p_e1 = 0;
+float Re_est_alg1=0, Ri_est_alg1=0, Cm_est_alg1=0;
+float sum1 = 0, sum2 = 0, sum3 = 0;
+
+unsigned long duration_alg1=0;
+
+void setup() 
+{
+  Serial.begin(9600);
+  while (!Serial) 
+  {
+    ; 
+  }
+  for(i=0;i<29;i++)
+  {
+    w[i] = 2.0*22.0*freq[i]/7.0;
+  }
+
+  //Without quadratic interpolation
+  duration_alg1 = micros(); 
+  maxImag=abs(imag[0]);
+  index = 0;
+  for(i=1; i<29; i++)
+  if (abs(imag[i])>=maxImag)
+  {
+    maxImag = abs(imag[i]);
+    index = i;
+  }
+  p_e1 = freq[index];
+
+  p_e1 = 2.0*22.0*p_e1/7.0;
+  
+  sum1 = 0;
+  sum2 = 0;
+  sum3 = 0;
+
+for(i=0;i<29;i++)
+{
+  z_pom_1[i] = -(imag[i]*w[i]*w[i] - real[i]*p_e1*w[i])/(imag[i]*p_e1 + real[i]*w[i]);
+  K[i]=(real[i]*w[i]+imag[i]*p_e1)/(w[i]);
+  Re_est[i] = z_pom_1[i]*K[i]/p_e1;
+  Ri_est[i] = K[i]* Re_est[i]/(Re_est[i]-K[i]);
+  Cm_est[i] = (Re_est[i] - K[i])/(z_pom_1[i]*K[i]*Re_est[i]);
+  sum1 +=  Re_est[i] ;
+  sum2 +=  Ri_est[i] ;
+  sum3 +=  Cm_est[i] ;
+}
+
+  Re_est_alg1 = sum1 / 29.0 ;
+  Ri_est_alg1 = sum2 / 29.0 ;
+  Cm_est_alg1 = sum3 / 29.0 ;
+
+  duration_alg1 = micros() - duration_alg1;
+  Serial.print("Without quadratic interpolation: ");
+  Serial.print(duration_alg1);
+  Serial.println(" us");
+
+  Serial.print("R1_alg1= ");
+  Serial.println(Re_est_alg1);
+
+  Serial.print("R2_alg1= ");
+  Serial.println(Ri_est_alg1);
+
+  Serial.print("C2_alg1= ");
+  Serial.print(Cm_est_alg1*1e9);
+  Serial.println(" nF");
+
+  Serial.print("Fc_alg1= ");
+  Serial.println(p_e1/(2.0*22.0/7.0));
+}
+
+
+void loop() 
+{
+
+}
