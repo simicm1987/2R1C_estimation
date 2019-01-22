@@ -1,0 +1,94 @@
+float freq[29]={5000, 8392, 11784, 15176, 18568, 21960, 25352, 28744, 32136, 35528, 38920, 42312, 45704, 49096, 52488, 55880, 59272, 62664, 66056, 69448, 72840, 76232, 79624, 83016, 86408, 89800, 93192, 96584, 99976};
+float real[29]={953.83, 913.05, 856.03, 797.76, 739.06, 685.83, 638.43, 597.17, 563.11, 532.74, 508.71, 485.33, 466.04, 450.31, 436.57, 424.68, 414.17, 405.25, 397.23, 390.55, 384.4, 378.86, 373.73, 369.97, 365.97, 362.66, 358.95, 356.06, 353.64};
+float imag[29]={-127.03, -200.81, -257.01, -293.67, -315.51, -326.35, -327.49, -323.5, -315.68, -306.52, -294.35, -284, -273.58, -262.24, -250.99, -240.52, -230.58, -221, -212.51, -204.05, -196, -188.53, -180.81, -174.94, -168.7, -163.73, -156.88, -151.2, -146.11};
+float w[29];
+char i = 0;
+float maxImag = 0.0;
+char index = 0;
+float z_pom_1[29], K[29], Re_est[29], Ri_est[29], Cm_est[29];
+float sum1 = 0.0, sum2 = 0.0, sum3 = 0.0;
+float alpha = 0.0, beta = 0.0, gamma = 0.0, w1 = 0.0, w2 = 0.0, w3 = 0.0;
+float a = 0.0, b = 0.0, c = 0.0, vertex = 0.0, fc_e2 = 0.0;
+float p_interpolation = 0;
+float Re_est_alg2=0.0, Ri_est_alg2=0.0, Cm_est_alg2=0.0;
+
+unsigned long duration_alg2=0;
+
+void setup() 
+{
+  Serial.begin(9600);
+  while (!Serial) 
+  {
+    ; 
+  }
+  for(i=0;i<29;i++)
+  {
+    w[i] = 2.0*22.0*freq[i]/7.0;
+  }
+
+  //With quadratic interpolation
+  duration_alg2 = micros(); 
+  maxImag=abs(imag[0]);
+  index = 0;
+  for(i=1; i<29; i++)
+  if (abs(imag[i])>=maxImag)
+  {
+    maxImag = abs(imag[i]);
+    index = i;
+  }
+  alpha=abs(imag[index-1]);
+  beta=abs(imag[index]);
+  gamma=abs(imag[index+1]);  
+  w1=w[index-1];
+  w2= w[index];
+  w3= w[index+1];
+
+  a = (alpha*w2 - alpha*w3 - beta*w1 + beta*w3 + gamma*w1 - gamma*w2)/((w1 - w2)*(w1*w2 - w1*w3 - w2*w3 + w3*w3));
+  b = -(alpha*w2*w2 - alpha*w3*w3 - beta*w1*w1 + beta*w3*w3 + gamma*w1*w1 - gamma*w2*w2)/((w1 - w2)*(w1*w2 - w1*w3 - w2*w3 + w3*w3));
+  c = -(- gamma*w1*w1*w2 + beta*w1*w1*w3 + gamma*w1*w2*w2 - beta*w1*w3*w3 - alpha*w2*w2*w3 + alpha*w2*w3*w3)/((w1 - w2)*(w1*w2 - w1*w3 - w2*w3 + w3*w3)); 
+  p_interpolation = -b/(2*a);
+  sum1=0.0;
+  sum2=0.0;
+  sum3=0.0;
+
+  for (i = 0 ; i < 29; i++)
+  {
+   z_pom_1[i] = -(imag[i]*w[i]*w[i] - real[i]*p_interpolation*w[i])/(imag[i]*p_interpolation + real[i]*w[i]);
+   K[i]=(real[i]*w[i]+imag[i]*p_interpolation)/(w[i]);
+   Ri_est[i] = K[i]* Re_est[i]/(Re_est[i]-K[i]);
+   Cm_est[i] = (Re_est[i] - K[i])/(z_pom_1[i]*K[i]*Re_est[i]);
+   Cm_est[i] = (z_pom_1[i] - p_interpolation)/(z_pom_1[i]*z_pom_1[i]*K[i]);
+   sum1 +=  Re_est[i] ;
+   sum2 +=  Ri_est[i] ;
+   sum3 +=  Cm_est[i] ;
+  }
+  
+  Re_est_alg2 = (float)sum1 / 29.0 ;
+  Ri_est_alg2 = (float)sum2 / 29.0 ;
+  Cm_est_alg2 = (float)sum3 / 29.0 ;
+
+  duration_alg2 = micros() - duration_alg2;
+  
+  Serial.print("With quadratic interpolation: ");
+  Serial.print(duration_alg2);
+  Serial.println(" us");
+
+  Serial.print("R1_alg2= ");
+  Serial.println(Re_est_alg2,3);
+
+  Serial.print("R2_alg2= ");
+  Serial.println(Ri_est_alg2,3);
+
+  Serial.print("C2_alg2= ");
+  Serial.print(Cm_est_alg2*1e9,3);
+  Serial.println(" nF");
+
+  Serial.print("Fc_alg2= ");
+  Serial.println(p_interpolation/(2.0*PI),3);
+}
+
+
+void loop() 
+{
+
+}
